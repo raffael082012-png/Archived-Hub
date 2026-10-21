@@ -1,0 +1,17 @@
+{
+  "name": "brave-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo no build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@mercuryworkshop/wisp-js": "^0.4.1",
+    "express": "^4.21.2"
+  }
+}
