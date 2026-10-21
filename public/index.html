@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Windows 11</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif;user-select:none}
+body{height:100vh;overflow:hidden;background-color:#000}
+
+/* BACKGROUND (Full screen, behind taskbar) */
+#wall{position:fixed;inset:0;background-color:#000;z-index:0;overflow:hidden}
+#wall video{
+  width:100%; height:100%; object-fit:cover; display:block;
+  image-rendering: -webkit-optimize-contrast;
+  filter: contrast(1.05) saturate(1.15);
+}
+
+/* CUSTOM SCROLLBARS */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: #555; border-radius: 6px; border: 3px solid #1f1f1f; }
+::-webkit-scrollbar-thumb:hover { background-color: #777; }
+
+/* DESKTOP ICONS */
+#icons{position:absolute;top:16px;left:16px;display:flex;flex-direction:column;gap:16px;z-index:10}
+.i{width:76px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#fff;font-size:12px;text-shadow:0 1px 3px #000;cursor:pointer;padding:4px;border-radius:4px;text-align:center}
+.i:hover{background:rgba(255,255,255,0.1)}
+.i img, .i svg{width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.5))}
+
+/* SETTINGS WINDOW */
+.app-window{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:850px;height:600px;background:#202020;border:1px solid rgba(255,255,255,0.1);border-radius:8px;box-shadow:0 20px 50px rgba(0,0,0,0.6);display:none;flex-direction:column;overflow:hidden;z-index:150}
+.app-window.open{display:flex}
+.app-header{height:32px;background:#2b2b2b;display:flex;align-items:center;justify-content:space-between;padding-left:12px;cursor:grab}
+.app-header:active{cursor:grabbing}
+.app-title{font-size:12px;color:#fff;display:flex;align-items:center;gap:8px}
+.app-controls{display:flex;height:100%}
+.app-btn{width:46px;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer}
+.app-btn:hover{background:rgba(255,255,255,0.1)}
+.app-btn.close:hover{background:#c42b1c}
+.app-body{flex:1;background:#1f1f1f;display:flex;color:#fff;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:260px;background:#202020;padding:16px 8px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.05)}
+.sidebar-item{padding:10px 16px;border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:13px}
+.sidebar-item:hover{background:rgba(255,255,255,0.05)}
+.sidebar-item.active{background:rgba(255,255,255,0.1);position:relative}
+.sidebar-item.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);height:16px;width:3px;background:#0078d4;border-radius:2px}
+
+/* CONTENT */
+.settings-content{flex:1;padding:32px 48px;overflow-y:auto;display:none}
+.settings-content.active{display:block}
+.settings-title{font-size:24px;font-weight:600;margin-bottom:24px}
+.settings-card{background:#2b2b2b;border-radius:8px;padding:16px;display:flex;align-items:center;gap:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.05);cursor:pointer}
+.settings-card:hover{background:#323232}
+.settings-icon{font-size:24px}
+.settings-text h3{font-size:14px;font-weight:500;margin-bottom:4px}
+.settings-text p{font-size:12px;color:#aaa}
+
+/* WALLPAPERS */
+.wallpaper-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.wallpaper-item{background:#2b2b2b;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:border-color 0.2s}
+.wallpaper-item:hover{border-color:#0078d4}
+.wallpaper-item video{width:100%;height:140px;object-fit:cover;pointer-events:none;filter:contrast(1.05) saturate(1.15);}
+.wallpaper-item p{padding:8px;font-size:13px;text-align:center}
+
+/* STEAM WINDOW — FreezNova library */
+#steam-win{width:960px;height:680px;background:#1b2838}
+#steam-win .app-header{background:#171a21}
+#steam-win .app-body{background:#1b2838;flex-direction:column;padding:0;overflow:hidden}
+.steam-topbar{height:48px;background:#171a21;display:flex;align-items:center;padding:0 16px;gap:20px;border-bottom:1px solid #000;flex-shrink:0}
+.steam-nav{display:flex;gap:18px;font-size:13px;color:#c7d5e0}
+.steam-nav span{cursor:pointer;padding:4px 0;border-bottom:2px solid transparent}
+.steam-nav span:hover,.steam-nav span.active{color:#fff;border-bottom-color:#66c0f4}
+.steam-search{margin-left:auto;height:28px;width:240px;background:#316282;border-radius:3px;display:flex;align-items:center;padding:0 10px;gap:8px}
+.steam-search input{background:none;border:none;outline:none;color:#fff;font-size:12px;width:100%}
+.steam-content{flex:1;display:flex;overflow:hidden;min-height:0}
+.steam-sidebar{width:180px;background:#171a21;padding:14px 10px;display:flex;flex-direction:column;gap:2px;border-right:1px solid #000;overflow-y:auto;flex-shrink:0}
+.steam-side-item{padding:8px 12px;border-radius:3px;font-size:13px;color:#c7d5e0;cursor:pointer}
+.steam-side-item:hover,.steam-side-item.active{background:#66c0f4;color:#1b2838}
+.steam-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.steam-lib-header{padding:16px 20px 8px;flex-shrink:0}
+.steam-section-title{font-size:18px;font-weight:600;color:#fff;margin-bottom:4px}
+.steam-section-sub{font-size:12px;color:#8f98a0}
+.steam-grid-wrap{flex:1;overflow-y:auto;padding:8px 20px 16px}
+.steam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.steam-game{background:#2a475e;border-radius:4px;overflow:hidden;cursor:pointer;transition:transform 0.12s,box-shadow 0.12s}
+.steam-game:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.45)}
+.steam-game-art{height:84px;background:linear-gradient(135deg,#1b2838 0%,#2a475e 50%,#66c0f4 150%);display:flex;align-items:center;justify-content:center;font-size:32px;position:relative}
+.steam-badge{position:absolute;top:6px;left:6px;background:#4c6b22;color:#a4d007;font-size:10px;font-weight:700;padding:2px 6px;border-radius:2px;text-transform:uppercase}
+.steam-game-info{padding:10px 12px}
+.steam-game-info h4{font-size:12px;color:#fff;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.steam-game-info p{font-size:11px;color:#8f98a0;margin-bottom:8px}
+.steam-play{background:#5c7e10;color:#fff;border:none;border-radius:2px;padding:5px 0;font-size:12px;cursor:pointer;width:100%;font-weight:600}
+.steam-play:hover{background:#6b8f12}
+.steam-footer{height:34px;background:#171a21;border-top:1px solid #000;display:flex;align-items:center;padding:0 16px;font-size:11px;color:#8f98a0;justify-content:space-between;flex-shrink:0}
+
+/* in-window game view (iframe inside steam) */
+.steam-play-view{display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden}
+.steam-play-view.active{display:flex}
+.steam-play-bar{height:40px;background:#171a21;display:flex;align-items:center;padding:0 12px;gap:12px;border-bottom:1px solid #000;flex-shrink:0}
+.steam-play-bar button{background:#2a475e;border:none;color:#c7d5e0;padding:5px 14px;border-radius:3px;cursor:pointer;font-size:12px}
+.steam-play-bar button:hover{background:#66c0f4;color:#1b2838}
+.steam-play-bar span{color:#fff;font-size:13px;font-weight:500}
+.steam-iframe-wrap{flex:1;position:relative;overflow:hidden;min-height:0;background:#000}
+.steam-iframe{position:absolute;inset:0;width:100%;height:100%;border:none;background:#000}
+
+/* hide library chrome when playing — pure game only */
+.steam-main.playing .steam-lib-header,
+.steam-main.playing .steam-grid-wrap{display:none}
+.steam-main.playing .steam-play-view{display:flex}
+#steam-win.playing .steam-topbar,
+#steam-win.playing .steam-sidebar,
+#steam-win.playing .steam-footer{display:none}
+#steam-win.playing .steam-content{border:none}
+.steam-play-bar{height:32px;background:rgba(0,0,0,0.85)}
+.steam-play-bar button{background:transparent;border:1px solid #444;color:#ccc;padding:3px 10px;font-size:11px}
+.steam-play-bar button:hover{background:#333;color:#fff;border-color:#666}
+.steam-play-bar span{font-size:12px;opacity:0.7}
+
+/* AKATSUKI AI WINDOW */
+#ai-win{width:720px;height:560px;background:#0d0d0d}
+#ai-win .app-header{background:#1a0505}
+#ai-win .app-body{background:#0d0d0d;flex-direction:column;padding:0;overflow:hidden}
+.ai-chat{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.ai-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.ai-msg.user{align-self:flex-end;background:#c41e3a;color:#fff;border-bottom-right-radius:4px}
+.ai-msg.bot{align-self:flex-start;background:#1a1a1a;color:#eee;border:1px solid #333;border-bottom-left-radius:4px}
+.ai-msg.sys{align-self:center;background:transparent;color:#888;font-size:11px}
+.ai-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid #222;background:#111;flex-shrink:0}
+.ai-input-row input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px 14px;color:#fff;font-size:13px;outline:none}
+.ai-input-row input:focus{border-color:#c41e3a}
+.ai-input-row button{background:#c41e3a;border:none;color:#fff;padding:0 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px}
+.ai-input-row button:hover{background:#e0243f}
+.ai-input-row button:disabled{opacity:0.5;cursor:wait}
+
+/* BRAVE BROWSER — tabbed chrome */
+#brave-win{width:960px;height:680px;background:#1e1e1e}
+#brave-win .app-header{display:none}
+#brave-win .app-body{background:#1e1e1e;flex-direction:column;padding:0;overflow:hidden}
+.brave-tabs{display:flex;align-items:flex-end;background:#1a1a1a;padding:6px 8px 0;gap:2px;min-height:36px;flex-shrink:0;overflow-x:auto}
+.brave-tab{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#2a2a2a;border-radius:8px 8px 0 0;color:#ccc;font-size:12px;cursor:pointer;max-width:180px;min-width:100px;border:1px solid #333;border-bottom:none;user-select:none}
+.brave-tab.active{background:#323232;color:#fff;border-color:#444}
+.brave-tab .t-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brave-tab .t-x{opacity:0.5;font-size:14px;line-height:1;padding:0 2px}
+.brave-tab .t-x:hover{opacity:1;color:#fb542b}
+.brave-tab-add{width:28px;height:28px;border:none;background:transparent;color:#aaa;font-size:18px;cursor:pointer;border-radius:6px;margin-bottom:4px;flex-shrink:0}
+.brave-tab-add:hover{background:rgba(255,255,255,0.08);color:#fff}
+.brave-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#323232;border-bottom:1px solid #111;flex-shrink:0}
+.brave-nav{display:flex;gap:4px}
+.brave-nav button{width:28px;height:28px;border:none;border-radius:6px;background:transparent;color:#ccc;cursor:pointer;font-size:14px}
+.brave-nav button:hover{background:rgba(255,255,255,0.1)}
+.brave-url{flex:1;height:32px;background:#1e1e1e;border:1px solid #444;border-radius:16px;padding:0 14px;color:#fff;font-size:13px;outline:none}
+.brave-url:focus{border-color:#fb542b}
+.brave-go{background:#fb542b;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.brave-go:hover{background:#ff6a45}
+.brave-win-btns{display:flex;gap:2px;margin-left:8px}
+.brave-win-btns button{width:28px;height:28px;border:none;border-radius:4px;background:transparent;color:#aaa;cursor:pointer;font-size:12px}
+.brave-win-btns button:hover{background:rgba(255,255,255,0.1);color:#fff}
+.brave-win-btns .close:hover{background:#e81123;color:#fff}
+.brave-frame-wrap{flex:1;position:relative;min-height:0;background:#111}
+.brave-frame{width:100%;height:100%;border:none;background:#0d0f12;display:none}
+.brave-frame.active{display:block}
+.brave-fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#aaa;font-size:14px;padding:24px;text-align:center;background:#1a1a1a}
+.brave-fallback.show{display:flex}
+.brave-fallback a{color:#fb542b}
+
+/* TASKBAR */
+#tb{position:fixed;bottom:0;width:100%;height:48px;background:rgba(32,32,32,0.85);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;z-index:100;border-top:1px solid rgba(255,255,255,0.1)}
+.b{height:40px;min-width:40px;padding:0 10px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;position:relative;transition:background 0.1s}
+.b:hover{background:rgba(255,255,255,0.1)}
+.b.active{background:rgba(255,255,255,0.15)}
+
+/* START BUTTON */
+.win{width:24px;height:24px;display:grid;grid-template-columns:11px 11px;grid-template-rows:11px 11px;gap:2px}
+.win i{border-radius:1.5px;background:linear-gradient(180deg,#1bc2ff 0%,#00adef 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.2)}
+
+#search{height:32px;width:200px;border-radius:16px;background:rgba(255,255,255,0.1);display:flex;align-items:center;padding:0 12px;gap:8px;margin:0 8px;border:1px solid rgba(255,255,255,0.1)}
+#search:focus-within{border-color:#0078d4;background:rgba(0,0,0,0.5)}
+#search input{background:none;border:none;outline:none;color:#fff;width:100%;font-size:13px}
+#search input::placeholder{color:rgba(255,255,255,0.6)}
+.icon{width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))}
+#apps{display:flex;gap:4px;margin-left:8px}
+
+/* START MENU */
+#start-menu{position:fixed;bottom:56px;left:50%;transform:translateX(-50%) translateY(20px);width:600px;height:600px;background:rgba(43,43,43,0.95);backdrop-filter:blur(40px) saturate(150%);border:1px solid rgba(255,255,255,0.08);border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,0.6);display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.15s,transform 0.15s;z-index:120}
+#start-menu.open{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.sm-search{margin:32px 40px 24px;height:36px;border-radius:18px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;padding:0 14px;gap:10px;color:rgba(255,255,255,0.6);font-size:13px}
+.sm-search input{background:transparent;border:none;outline:none;color:#fff;font-size:13px;width:100%;font-family:inherit}
+.sm-header{display:flex;justify-content:space-between;align-items:center;margin:0 40px 12px;font-size:13px;font-weight:600;color:#fff}
+.sm-header a{color:rgba(255,255,255,0.6);text-decoration:none;font-size:12px;background:rgba(255,255,255,0.05);padding:4px 10px;border-radius:12px}
+.sm-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:0 40px}
+.sm-app{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;border-radius:6px;cursor:pointer}
+.sm-app:hover{background:rgba(255,255,255,0.08)}
+.sm-app img{width:32px;height:32px;object-fit:contain;border-radius:4px}
+.sm-app span{font-size:12px;color:#fff}
+.sm-foot{margin-top:auto;padding:16px 40px;background:rgba(255,255,255,0.04);border-radius:0 0 10px 10px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.05)}
+.sm-user{display:flex;align-items:center;gap:12px;font-size:13px;font-weight:500;cursor:pointer;padding:6px 12px;border-radius:4px;color:#fff}
+.sm-user:hover{background:rgba(255,255,255,0.08)}
+.sm-avatar{width:32px;height:32px;border-radius:50%;background:#0078d4;display:flex;align-items:center;justify-content:center;font-weight:600}
+.sm-power{padding:8px;border-radius:4px;cursor:pointer}
+.sm-power:hover{background:rgba(255,255,255,0.08)}
+#overlay-click{position:fixed;inset:0;z-index:110;display:none}
+#overlay-click.show{display:block}
+</style>
+</head>
+<body>
+
+<div id="wall">
+  <video id="wallpaper-video" src="https://motionbgs.com/media/950/itachi-with-grey-hair-and-sharingan-eyes.960x540.mp4" autoplay loop muted playsinline></video>
+</div>
+
+<div id="overlay-click" onclick="toggleStart()"></div>
+
+<!-- SETTINGS WINDOW -->
+<div class="app-window" id="settings-win">
+  <div class="app-header" onmousedown="startDrag(event, 'settings-win')">
+    <div class="app-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="#fff" stroke-width="1.6"/><path d="M19.4 13.5c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.4 7.4 0 0 0-1.73-1l-.36-2.54a.5.5 0 0 0-.5-.43h-3.84a.5.5 0 0 0-.5.43l-.36 2.54c-.63.24-1.21.58-1.73 1l-2.39-.96a.5.5 0 0 0-.6.22L2.75 9.28a.5.5 0 0 0 .12.64L4.9 11.5c-.04.33-.06.66-.06 1s.02.67.06 1l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.52.42 1.1.76 1.73 1l.36 2.54c.04.25.25.43.5.43h3.84c.25 0 .46-.18.5-.43l.36-2.54c.63-.24 1.21-.58 1.73-1l2.39.96c.21.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64L19.4 13.5Z" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      Settings
+    </div>
+    <div class="app-controls">
+      <div class="app-btn" onclick="document.getElementById('settings-win').classList.remove('open')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" stroke-width="1"/></svg></div>
+      <div class="app-btn close" onclick="document.getElementById('settings-win').classList.remove('open')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"/></svg></div>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-item active" onclick="switchSettings('home', this)">Home</div>
+      <div class="sidebar-item" onclick="switchSettings('system', this)">System</div>
+      <div class="sidebar-item" onclick="switchSettings('bluetooth', this)">Bluetooth & devices</div>
+      <div class="sidebar-item" onclick="switchSettings('network', this)">Network & internet</div>
+      <div class="sidebar-item" onclick="switchSettings('personalization', this)">Personalization</div>
+      <div class="sidebar-item" onclick="switchSettings('apps', this)">Apps</div>
+    </div>
+    
+    <div class="settings-content active" id="settings-home">
+      <div class="settings-title">Home</div>
+      <div class="settings-card"><div class="settings-icon">👤</div><div class="settings-text"><h3>Local Account</h3><p>Microsoft Account</p></div></div>
+      <div class="settings-card"><div class="settings-icon">📶</div><div class="settings-text"><h3>Wi-Fi</h3><p>Connected to Home Network</p></div></div>
+      <div class="settings-card"><div class="settings-icon">🔊</div><div class="settings-text"><h3>Sound</h3><p>Volume at 65%</p></div></div>
+    </div>
+    <div class="settings-content" id="settings-system">
+      <div class="settings-title">System</div>
+      <div class="settings-card"><div class="settings-icon">🖥️</div><div class="settings-text"><h3>Display</h3><p>Monitors, brightness, night light</p></div></div>
+      <div class="settings-card"><div class="settings-icon">🔊</div><div class="settings-text"><h3>Sound</h3><p>Volume levels, output, input</p></div></div>
+      <div class="settings-card"><div class="settings-icon">🔋</div><div class="settings-text"><h3>Power & battery</h3><p>Sleep, battery usage</p></div></div>
+    </div>
+    <div class="settings-content" id="settings-bluetooth">
+      <div class="settings-title">Bluetooth & devices</div>
+      <div class="settings-card"><div class="settings-icon">🖱️</div><div class="settings-text"><h3>Mouse</h3><p>Mouse settings</p></div></div>
+      <div class="settings-card"><div class="settings-icon">⌨️</div><div class="settings-text"><h3>Keyboard</h3><p>Keyboard settings</p></div></div>
+    </div>
+    <div class="settings-content" id="settings-network">
+      <div class="settings-title">Network & internet</div>
+      <div class="settings-card"><div class="settings-icon">📶</div><div class="settings-text"><h3>Wi-Fi</h3><p>Manage known networks</p></div></div>
+      <div class="settings-card"><div class="settings-icon">🌐</div><div class="settings-text"><h3>Ethernet</h3><p>Network properties</p></div></div>
+    </div>
+    <div class="settings-content" id="settings-personalization">
+      <div class="settings-title">Personalization</div>
+      <h3 style="margin-bottom:16px;font-size:16px;">Choose your background</h3>
+      <div class="wallpaper-grid">
+        <div class="wallpaper-item" onclick="setWallpaper('https://motionbgs.com/media/950/itachi-with-grey-hair-and-sharingan-eyes.960x540.mp4')"><video src="https://motionbgs.com/media/950/itachi-with-grey-hair-and-sharingan-eyes.960x540.mp4" muted loop autoplay></video><p>Itachi</p></div>
+        <div class="wallpaper-item" onclick="setWallpaper('https://motionbgs.com/media/1613/ryomen-sukuna-surrounded-blossom.960x540.mp4')"><video src="https://motionbgs.com/media/1613/ryomen-sukuna-surrounded-blossom.960x540.mp4" muted loop autoplay></video><p>Sukuna</p></div>
+        <div class="wallpaper-item" onclick="setWallpaper('https://motionbgs.com/media/9212/dream-chaser-black-and-white.960x540.mp4')"><video src="https://motionbgs.com/media/9212/dream-chaser-black-and-white.960x540.mp4" muted loop autoplay></video><p>Dream Chaser</p></div>
+        <div class="wallpaper-item" onclick="setWallpaper('https://motionbgs.com/media/9019/naruto-endless-sky.960x540.mp4')"><video src="https://motionbgs.com/media/9019/naruto-endless-sky.960x540.mp4" muted loop autoplay></video><p>Naruto</p></div>
+        <div class="wallpaper-item" onclick="setWallpaper('https://motionbgs.com/media/1397/goku-ultra-instinct_2.960x540.mp4')"><video src="https://motionbgs.com/media/1397/goku-ultra-instinct_2.960x540.mp4" muted loop autoplay></video><p>Goku</p></div>
+      </div>
+    </div>
+    <div class="settings-content" id="settings-apps">
+      <div class="settings-title">Apps</div>
+      <div class="settings-card"><div class="settings-icon">📦</div><div class="settings-text"><h3>Installed apps</h3><p>Uninstall, move, modify</p></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEAM WINDOW -->
+<div class="app-window" id="steam-win">
+  <div class="app-header" onmousedown="startDrag(event, 'steam-win')">
+    <div class="app-title">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" width="16" height="16" style="filter:brightness(0) invert(1)">
+      Steam
+    </div>
+    <div class="app-controls">
+      <div class="app-btn" onclick="closeSteam()"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" stroke-width="1"/></svg></div>
+      <div class="app-btn close" onclick="closeSteam()"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"/></svg></div>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="steam-topbar">
+      <div class="steam-nav">
+        <span class="active">LIBRARY</span>
+        <span>STORE</span>
+        <span>COMMUNITY</span>
+      </div>
+      <div class="steam-search">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#c7d5e0" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="#c7d5e0" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="text" placeholder="Search Archived Games..." id="steam-search-in" oninput="filterGames(this.value)">
+      </div>
+    </div>
+    <div class="steam-content">
+      <div class="steam-sidebar" id="steam-sidebar">
+        <div class="steam-side-item active" onclick="filterCat('all', this)">All Archived</div>
+        <div class="steam-side-item" onclick="filterCat('action', this)">Action</div>
+        <div class="steam-side-item" onclick="filterCat('racing', this)">Racing</div>
+        <div class="steam-side-item" onclick="filterCat('shooter', this)">Shooter</div>
+        <div class="steam-side-item" onclick="filterCat('sports', this)">Sports</div>
+        <div class="steam-side-item" onclick="filterCat('arcade', this)">Arcade</div>
+        <div class="steam-side-item" onclick="filterCat('multiplayer', this)">Multiplayer</div>
+        <div class="steam-side-item" onclick="filterCat('puzzle', this)">Puzzle</div>
+      </div>
+      <div class="steam-main" id="steam-main">
+        <div class="steam-lib-header">
+          <div class="steam-section-title">Archived Games</div>
+          <div class="steam-section-sub">Click a game — plays inside this window</div>
+        </div>
+        <div class="steam-grid-wrap">
+          <div class="steam-grid" id="steam-grid"></div>
+        </div>
+        <!-- iframe play view — cropped to hide FreezNova header bar -->
+        <div class="steam-play-view" id="steam-play-view">
+          <div class="steam-play-bar">
+            <button onclick="backToLibrary()">← Library</button>
+            <span id="gp-title">Game</span>
+          </div>
+          <div class="steam-iframe-wrap">
+            <iframe id="game-frame" class="steam-iframe" allowfullscreen allow="fullscreen; autoplay; gamepad"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="steam-footer">
+      <span>Archived Games · Steam</span>
+      <span id="steam-status">Ready</span>
+    </div>
+  </div>
+</div>
+
+<!-- BRAVE BROWSER -->
+<div class="app-window" id="brave-win">
+  <div class="app-body" onmousedown="if(event.target.classList.contains('brave-tabs')||event.target.classList.contains('brave-bar'))startDrag(event,'brave-win')">
+    <div class="brave-tabs" id="brave-tabs">
+      <button class="brave-tab-add" onclick="braveNewTab()" title="New tab">+</button>
+    </div>
+    <div class="brave-bar">
+      <div class="brave-nav">
+        <button onclick="braveBack()" title="Back">←</button>
+        <button onclick="braveFwd()" title="Forward">→</button>
+        <button onclick="braveReload()" title="Reload">↻</button>
+      </div>
+      <input class="brave-url" id="brave-url" type="text" value="brave://search" onkeydown="if(event.key==='Enter')braveGo()">
+      <button class="brave-go" onclick="braveGo()">Go</button>
+      <div class="brave-win-btns">
+        <button onclick="document.getElementById('brave-win').classList.remove('open')" title="Minimize">─</button>
+        <button class="close" onclick="document.getElementById('brave-win').classList.remove('open')" title="Close">✕</button>
+      </div>
+    </div>
+    <div class="brave-frame-wrap" id="brave-frames">
+      <div class="brave-fallback" id="brave-fallback">
+        <div style="font-size:28px">🦁</div>
+        <div>This site blocks iframe embedding.</div>
+        <a id="brave-ext" href="#" target="_blank" rel="noopener">Open outside</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AKATSUKI AI WINDOW -->
+<div class="app-window" id="ai-win">
+  <div class="app-header" onmousedown="startDrag(event, 'ai-win')">
+    <div class="app-title">
+      <svg viewBox="0 0 100 70" width="22" height="16" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="38" rx="42" ry="26" fill="#c41e3a" stroke="#fff" stroke-width="3"/>
+        <ellipse cx="28" cy="28" rx="14" ry="10" fill="#c41e3a" stroke="#fff" stroke-width="2.5"/>
+        <ellipse cx="72" cy="26" rx="12" ry="9" fill="#c41e3a" stroke="#fff" stroke-width="2.5"/>
+        <ellipse cx="50" cy="18" rx="10" ry="8" fill="#c41e3a" stroke="#fff" stroke-width="2.5"/>
+      </svg>
+      Akatsuki AI
+    </div>
+    <div class="app-controls">
+      <div class="app-btn" onclick="document.getElementById('ai-win').classList.remove('open')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" stroke-width="1"/></svg></div>
+      <div class="app-btn close" onclick="document.getElementById('ai-win').classList.remove('open')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"/></svg></div>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="ai-chat" id="ai-chat">
+      <div class="ai-msg sys">Akatsuki AI online · powered by open text models (not GPT / Gemini)</div>
+    </div>
+    <div class="ai-input-row">
+      <input type="text" id="ai-input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendAi()">
+      <button id="ai-send" onclick="sendAi()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP ICONS -->
+<div id="icons">
+  <div class="i">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="glassFront" x1="30" y1="30" x2="70" y2="90" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="0.9"/><stop offset="0.4" stop-color="#f0f0f0" stop-opacity="0.6"/><stop offset="0.8" stop-color="#b0b0b0" stop-opacity="0.4"/><stop offset="1" stop-color="#808080" stop-opacity="0.7"/></linearGradient>
+        <linearGradient id="glassBack" x1="30" y1="30" x2="70" y2="90" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a0a0a0" stop-opacity="0.8"/><stop offset="1" stop-color="#505050" stop-opacity="0.9"/></linearGradient>
+        <linearGradient id="rim" x1="20" y1="25" x2="80" y2="35" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset="0.3" stop-color="#e0e0e0"/><stop offset="0.5" stop-color="#9e9e9e"/><stop offset="0.8" stop-color="#e0e0e0"/><stop offset="1" stop-color="#fff"/></linearGradient>
+      </defs>
+      <path d="M25 32 L32 88 C32.5 92 35 94 38 94 H62 C65 94 67.5 92 68 88 L75 32 Z" fill="url(#glassBack)"/>
+      <path d="M35 70 Q 40 60 45 70 T 55 65 T 65 75 L 65 88 L 35 88 Z" fill="#e0e0e0" opacity="0.8"/>
+      <path d="M25 32 L32 88 C32.5 92 35 94 38 94 H62 C65 94 67.5 92 68 88 L75 32 Z" fill="url(#glassFront)"/>
+      <path d="M28 35 L34 88" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/><path d="M72 35 L66 88" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+      <rect x="20" y="24" width="60" height="8" rx="4" fill="url(#rim)"/><rect x="22" y="25" width="56" height="1.5" rx="1" fill="#fff" opacity="0.9"/>
+      <g fill="#0078d4"><path d="M50 40 L36 60 H44 V78 H56 V60 H64 L50 40 Z" /><path d="M34 62 L20 78 L36 84 V74 H56 V68 H36 V62 Z" /><path d="M66 62 L80 78 L64 84 V74 H44 V68 H64 V62 Z" /></g>
+    </svg>
+    <span>Recycle Bin</span>
+  </div>
+  <div class="i" onclick="document.getElementById('settings-win').classList.add('open')">
+    <svg width="38" height="38" viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="#fff" stroke-width="1.6"/><path d="M19.4 13.5c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.4 7.4 0 0 0-1.73-1l-.36-2.54a.5.5 0 0 0-.5-.43h-3.84a.5.5 0 0 0-.5.43l-.36 2.54c-.63.24-1.21.58-1.73 1l-2.39-.96a.5.5 0 0 0-.6.22L2.75 9.28a.5.5 0 0 0 .12.64L4.9 11.5c-.04.33-.06.66-.06 1s.02.67.06 1l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.52.42 1.1.76 1.73 1l.36 2.54c.04.25.25.43.5.43h3.84c.25 0 .46-.18.5-.43l.36-2.54c.63-.24 1.21-.58 1.73-1l2.39.96c.21.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64L19.4 13.5Z" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg>
+    <span>Settings</span>
+  </div>
+  <div class="i" onclick="openSteam()">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg">
+    <span>Steam</span>
+  </div>
+  <div class="i" onclick="openBrave()">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png">
+    <span>Brave</span>
+  </div>
+  <div class="i" onclick="openAi()">
+    <svg viewBox="0 0 100 70" width="38" height="28" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="38" rx="42" ry="26" fill="#c41e3a" stroke="#fff" stroke-width="3"/>
+      <ellipse cx="28" cy="28" rx="14" ry="10" fill="#c41e3a" stroke="#fff" stroke-width="2.5"/>
+      <ellipse cx="72" cy="26" rx="12" ry="9" fill="#c41e3a" stroke="#fff" stroke-width="2.5"/>
+      <ellipse cx="50" cy="18" rx="10" ry="8" fill="#c41e3a" stroke="#fff" stroke-width="2.5"/>
+    </svg>
+    <span>Akatsuki AI</span>
+  </div>
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+  <div class="sm-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="text" placeholder="Search for apps, settings, and documents"></div>
+  <div class="sm-header"><span>Pinned</span><a href="#">All apps &rsaquo;</a></div>
+  
+  <div class="sm-grid">
+    <div class="sm-app" onclick="document.getElementById('settings-win').classList.add('open');toggleStart()">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/Windows_11_logo.svg"><span>Settings</span>
+    </div>
+    <div class="sm-app" onclick="openBrave()">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png"><span>Brave</span>
+    </div>
+    <div class="sm-app" onclick="openSteam()">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg"><span>Steam</span>
+    </div>
+  </div>
+
+  <div class="sm-header" style="margin-top:24px;"><span>Recommended</span><a href="#">More &rsaquo;</a></div>
+  <div class="sm-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="sm-app" style="flex-direction:row;justify-content:flex-start;gap:12px;padding:10px;" onclick="openBrave()"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png" style="width:24px;height:24px;"><span style="font-size:13px;">Brave Browser</span></div>
+    <div class="sm-app" style="flex-direction:row;justify-content:flex-start;gap:12px;padding:10px;" onclick="openSteam()"><img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" style="width:24px;height:24px;"><span style="font-size:13px;">Steam</span></div>
+  </div>
+  <div class="sm-foot">
+    <div class="sm-user"><div class="sm-avatar"></div></div>
+    <div class="sm-power"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+  </div>
+</div>
+
+<!-- TASKBAR -->
+<div id="tb">
+  <div class="b" id="start-btn" onclick="toggleStart()" title="Start"><div class="win"><i></i><i></i><i></i><i></i></div></div>
+  <div id="search" onclick="document.getElementById('s-in').focus()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#fff" stroke-width="2"/><path d="m21 21-4.3-4.3" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg><input id="s-in" type="text" placeholder="Search"></div>
+  <div id="apps">
+    <div class="b" title="Brave" onclick="openBrave()"><img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/5/51/Brave_icon_lionface.png"></div>
+    <div class="b" title="Steam" onclick="openSteam()"><img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg"></div>
+  </div>
+  <div style="position:absolute;right:16px;display:flex;align-items:center;gap:12px;color:#fff;font-size:12px;cursor:pointer"><div style="text-align:right" id="clock"></div></div>
+</div>
+
+<script>
+  // CLOCK
+  function updateClock() {
+    const d = new Date(); let h = d.getHours(), m = d.getMinutes();
+    let ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    document.getElementById('clock').innerHTML = h + ':' + (m<10?'0':'')+m + ' ' + ampm + '<br>' + (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+  }
+  updateClock(); setInterval(updateClock, 1000);
+
+  // START MENU
+  function toggleStart() {
+    const startMenu = document.getElementById('start-menu');
+    const overlay = document.getElementById('overlay-click');
+    const startBtn = document.getElementById('start-btn');
+    const isOpen = startMenu.classList.contains('open');
+    if (isOpen) { startMenu.classList.remove('open'); overlay.classList.remove('show'); startBtn.classList.remove('active'); }
+    else { startMenu.classList.add('open'); overlay.classList.add('show'); startBtn.classList.add('active'); }
+  }
+
+  // SETTINGS NAVIGATION
+  function switchSettings(section, el) {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.settings-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('settings-' + section).classList.add('active');
+  }
+
+  // WALLPAPER
+  function setWallpaper(url) {
+    document.getElementById('wallpaper-video').src = url;
+  }
+
+  // DRAGGING
+  function startDrag(e, id) {
+    const el = document.getElementById(id);
+    const rect = el.getBoundingClientRect();
+    const shiftX = e.clientX - rect.left;
+    const shiftY = e.clientY - rect.top;
+    el.style.transform = 'none';
+    el.style.left = rect.left + 'px';
+    el.style.top = rect.top + 'px';
+    el.style.margin = '0';
+
+    function moveAt(pageX, pageY) {
+      el.style.left = pageX - shiftX + 'px';
+      el.style.top = pageY - shiftY + 'px';
+    }
+
+    function onMouseMove(event) { moveAt(event.pageX, event.pageY); }
+    document.addEventListener('mousemove', onMouseMove);
+
+    document.onmouseup = function() {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.onmouseup = null;
+    };
+  }
+
+  // ========== ARCHIVED GAMES ==========
+  // pure unblocked embeds (s3) — no FreezNova chrome; usually passes school filters
+  const freezenovaGames = [
+    { name: "Masked Forces 3", cat: "shooter", emoji: "🎯", url: "https://unblocked-games.s3.amazonaws.com/games/masked-forces-3/index2.html" },
+    { name: "Masked Forces Crazy Mode", cat: "shooter", emoji: "🔫", url: "https://unblocked-games.s3.amazonaws.com/games/masked-forces-crazy-mode/index2.html" },
+    { name: "Drift Hunters Pro", cat: "racing", emoji: "💨", url: "https://unblocked-games.s3.amazonaws.com/games/2023/unity/drift-hunters-pro/game.html" },
+    { name: "Drift Hunters 2024", cat: "racing", emoji: "🚗", url: "https://unblocked-games.s3.amazonaws.com/games/2024/unity/drift-hunters-2024/game.html" },
+    { name: "Drift Boss", cat: "racing", emoji: "🏎️", url: "https://unblocked-games.s3.amazonaws.com/games/2023/more/drift-boss/game.html" },
+    { name: "Eggy Car", cat: "racing", emoji: "🥚", url: "https://unblocked-games.s3.amazonaws.com/games/2025/beedo/eggy-car/game.html" },
+    { name: "Escape Car 2", cat: "racing", emoji: "🚓", url: "https://unblocked-games.s3.amazonaws.com/games/2026/unity/escape-car-2/game.html" },
+    { name: "Basket Random Pro", cat: "sports", emoji: "🏀", url: "https://unblocked-games.s3.amazonaws.com/games/2025/construct/320/basket-random-pro/game.html" },
+    { name: "Basketball Stars", cat: "sports", emoji: "🏀", url: "https://unblocked-games.s3.amazonaws.com/games/2024/gm/basketball-stars/game.html" },
+    { name: "Head Ball Online", cat: "sports", emoji: "🏐", url: "https://unblocked-games.s3.amazonaws.com/games/2024/unity2/head-ball-online/game.html" },
+    { name: "Sports MiniBattles", cat: "sports", emoji: "⚽", url: "https://unblocked-games.s3.amazonaws.com/games/2024/shareddreams/sports-minibattles/index.html" },
+    { name: "Geometry Dash", cat: "arcade", emoji: "🟩", url: "https://unblocked-games.s3.amazonaws.com/games/2023/q2/geometry-dash-freezenova/game.html" },
+    { name: "Idle Breakout", cat: "arcade", emoji: "🧱", url: "https://unblocked-games.s3.amazonaws.com/games/2024/more/idle-breakout/index.html" },
+    { name: "Block Blast", cat: "arcade", emoji: "🧩", url: "https://unblocked-games.s3.amazonaws.com/games/2024/unity3/block-blast/game.html" },
+    { name: "OvO", cat: "arcade", emoji: "🥚", url: "https://unblocked-games.s3.amazonaws.com/games/2023/ovo/index.html" },
+    { name: "Crazy Cattle 3D", cat: "action", emoji: "🐄", url: "https://unblocked-games.s3.amazonaws.com/games/2025/unity3/crazy-cattle-3d/game.html" },
+    { name: "Galatrix", cat: "action", emoji: "🚀", url: "https://unblocked-games.s3.amazonaws.com/games/2001/galatrix/game.html" },
+    { name: "Marble Run", cat: "arcade", emoji: "🔵", url: "https://unblocked-games.s3.amazonaws.com/games/2026/galatrix/marble-run/game.html" },
+    { name: "FNAF", cat: "horror", emoji: "🐻", url: "https://unblocked-games.s3.amazonaws.com/games/2024/more2/five-nights-at-freddys/fnaf/game.html" },
+    { name: "Friday Night Funkin", cat: "arcade", emoji: "🎤", url: "https://unblocked-games.s3.amazonaws.com/games/2024/cube/friday-night-funkin/game.html" }
+  ];
+
+  let currentCat = 'all';
+  let currentSearch = '';
+
+  function openSteam() {
+    document.getElementById('steam-win').classList.add('open');
+    document.getElementById('start-menu').classList.remove('open');
+    document.getElementById('overlay-click').classList.remove('show');
+    document.getElementById('start-btn').classList.remove('active');
+    backToLibrary();
+    renderGames();
+  }
+
+  function closeSteam() {
+    backToLibrary();
+    document.getElementById('steam-win').classList.remove('open');
+  }
+
+  function filterCat(cat, el) {
+    currentCat = cat;
+    document.querySelectorAll('.steam-side-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    renderGames();
+  }
+
+  function filterGames(q) {
+    currentSearch = (q || '').toLowerCase();
+    renderGames();
+  }
+
+  function renderGames() {
+    const grid = document.getElementById('steam-grid');
+    const filtered = freezenovaGames.filter(g => {
+      const catOk = currentCat === 'all' || g.cat === currentCat;
+      const searchOk = !currentSearch || g.name.toLowerCase().includes(currentSearch);
+      return catOk && searchOk;
+    });
+    grid.innerHTML = filtered.map(g => {
+      const safeName = g.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `
+      <div class="steam-game" onclick="playGame('${safeName}','${g.url}')">
+        <div class="steam-game-art">
+          <span class="steam-badge">FREE</span>
+          <span>${g.emoji}</span>
+        </div>
+        <div class="steam-game-info">
+          <h4>${g.name}</h4>
+          <p>Archived · ${g.cat}</p>
+          <button class="steam-play" onclick="event.stopPropagation();playGame('${safeName}','${g.url}')">PLAY</button>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('steam-status').textContent = filtered.length + ' games';
+  }
+
+  function playGame(name, url) {
+    document.getElementById('gp-title').textContent = name;
+    document.getElementById('game-frame').src = url;
+    document.getElementById('steam-main').classList.add('playing');
+    document.getElementById('steam-win').classList.add('playing');
+    document.getElementById('steam-status').textContent = 'Playing · ' + name;
+  }
+
+  function backToLibrary() {
+    document.getElementById('steam-main').classList.remove('playing');
+    document.getElementById('steam-win').classList.remove('playing');
+    document.getElementById('game-frame').src = 'about:blank';
+    document.getElementById('steam-status').textContent = freezenovaGames.length + ' games';
+  }
+
+  // ========== BRAVE (tabbed) ==========
+  let braveTabs = [];
+  let braveActive = 0;
+  let braveTabId = 0;
+
+  function openBrave() {
+    document.getElementById('brave-win').classList.add('open');
+    document.getElementById('start-menu').classList.remove('open');
+    document.getElementById('overlay-click').classList.remove('show');
+    document.getElementById('start-btn').classList.remove('active');
+    if (braveTabs.length === 0) {
+      braveNewTab('https://smartlearningmath.b-cdn.net/');
+    }
+  }
+
+  function braveNewTab(url) {
+    const id = ++braveTabId;
+    const title = url ? (url.replace(/^https?:\/\//,'').slice(0,24)) : 'New Tab';
+    const tab = { id, title, url: url || 'brave://search', hist: [url || 'brave://search'], idx: 0 };
+    braveTabs.push(tab);
+    braveActive = braveTabs.length - 1;
+    const bar = document.getElementById('brave-tabs');
+    const el = document.createElement('div');
+    el.className = 'brave-tab';
+    el.dataset.id = id;
+    el.innerHTML = '<span class="t-title">' + title + '</span><span class="t-x" data-close="' + id + '">×</span>';
+    el.onclick = function(e) {
+      if (e.target.dataset.close) { braveCloseTab(+e.target.dataset.close); return; }
+      braveSwitchTab(id);
+    };
+    bar.insertBefore(el, bar.querySelector('.brave-tab-add'));
+    const frames = document.getElementById('brave-frames');
+    const iframe = document.createElement('iframe');
+    iframe.className = 'brave-frame';
+    iframe.id = 'brave-frame-' + id;
+    iframe.allow = 'fullscreen';
+    frames.appendChild(iframe);
+    braveSwitchTab(id);
+    if (!url || url === 'brave://search') {
+      // Oxygen / smartlearningmath — real proxy browser (DDG + sites)
+      iframe.removeAttribute('srcdoc');
+      iframe.src = 'https://smartlearningmath.b-cdn.net/';
+      document.getElementById('brave-url').value = 'https://smartlearningmath.b-cdn.net/';
+    } else {
+      iframe.src = url;
+      document.getElementById('brave-url').value = url;
+    }
+  }
+
+  function braveSwitchTab(id) {
+    const i = braveTabs.findIndex(t => t.id === id);
+    if (i < 0) return;
+    braveActive = i;
+    document.querySelectorAll('.brave-tab').forEach(t => t.classList.toggle('active', +t.dataset.id === id));
+    document.querySelectorAll('.brave-frame').forEach(f => f.classList.toggle('active', f.id === 'brave-frame-' + id));
+    document.getElementById('brave-url').value = braveTabs[i].url;
+  }
+
+  function braveCloseTab(id) {
+    const i = braveTabs.findIndex(t => t.id === id);
+    if (i < 0) return;
+    const tabEl = document.querySelector('.brave-tab[data-id="' + id + '"]');
+    if (tabEl) tabEl.remove();
+    const fr = document.getElementById('brave-frame-' + id);
+    if (fr) fr.remove();
+    braveTabs.splice(i, 1);
+    if (braveTabs.length === 0) {
+      document.getElementById('brave-win').classList.remove('open');
+      return;
+    }
+    if (braveActive >= braveTabs.length) braveActive = braveTabs.length - 1;
+    braveSwitchTab(braveTabs[braveActive].id);
+  }
+
+  function braveActiveFrame() {
+    const t = braveTabs[braveActive];
+    return t ? document.getElementById('brave-frame-' + t.id) : null;
+  }
+
+  function braveSearchPage(q) {
+    const qq = (q || '').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI,system-ui,sans-serif}
+body{background:#0d0f12;color:#e8eaed;min-height:100vh}
+.top{padding:48px 16px 24px;text-align:center}
+.logo{font-size:28px;font-weight:700;color:#fb542b;margin-bottom:20px;letter-spacing:-0.5px}
+.logo span{color:#fff}
+.box{max-width:560px;margin:0 auto;display:flex;border:1px solid #3a3f4b;border-radius:24px;overflow:hidden;background:#1a1d24}
+.box input{flex:1;background:transparent;border:none;padding:14px 18px;color:#fff;font-size:15px;outline:none}
+.box button{background:#fb542b;border:none;color:#fff;padding:0 22px;font-weight:600;cursor:pointer;font-size:14px}
+.res{max-width:680px;margin:0 auto;padding:8px 16px 40px}
+.r{padding:14px 0;border-bottom:1px solid #222}
+.r a{color:#8ab4f8;font-size:17px;text-decoration:none;cursor:pointer}
+.r a:hover{text-decoration:underline}
+.r .u{color:#9aa0a6;font-size:12px;margin:4px 0}
+.r .s{color:#bdc1c6;font-size:13px;line-height:1.4}
+.empty{text-align:center;color:#666;padding:40px;font-size:14px}
+</style></head><body>
+<div class="top"><div class="logo">Brave <span>Search</span></div>
+<form class="box" onsubmit="event.preventDefault();parent.braveDoSearch(document.getElementById('q').value)">
+<input id="q" value="${qq}" placeholder="Search the web with Brave…" autofocus>
+<button type="submit">Search</button>
+</form></div>
+<div class="res" id="res"><div class="empty">Search with Brave — results load here</div></div>
+</body></html>`;
+  }
+
+  async function braveDoSearch(q) {
+    q = (q || '').trim();
+    if (!q) return;
+    const u = 'https://search.brave.com/search?q=' + encodeURIComponent(q);
+    document.getElementById('brave-url').value = u;
+    const frame = braveActiveFrame();
+    if (!frame) return;
+    if (braveTabs[braveActive]) {
+      const t = braveTabs[braveActive];
+      t.url = u;
+      t.title = 'Search: ' + q.slice(0, 20);
+      const te = document.querySelector('.brave-tab[data-id="'+t.id+'"] .t-title');
+      if (te) te.textContent = t.title;
+    }
+    frame.removeAttribute('src');
+    frame.srcdoc = '<html><body style="margin:0;background:#0d0f12;color:#aaa;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">Loading real Brave Search…</body></html>';
+    // try multiple public HTML proxies for real Brave SERP
+    const proxies = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+      'https://corsproxy.io/?url=' + encodeURIComponent(u),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+    ];
+    let html = null;
+    for (const pxy of proxies) {
+      try {
+        const r = await fetch(pxy);
+        if (!r.ok) continue;
+        const text = await r.text();
+        if (text && text.length > 500 && !/error code|522|403|keyless/i.test(text.slice(0,200))) {
+          html = text;
+          break;
+        }
+      } catch (_) {}
+    }
+    if (html) {
+      const base = '<base href="https://search.brave.com/">';
+      if (/<head[^>]*>/i.test(html)) html = html.replace(/<head[^>]*>/i, m => m + base);
+      else html = base + html;
+      frame.srcdoc = html;
+    } else {
+      // last resort: open real Brave Search in a browser tab so user gets official results
+      window.open(u, '_blank', 'noopener');
+      frame.srcdoc = '<html><body style="margin:0;background:#0d0f12;color:#e8eaed;font-family:Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px"><div style="font-size:28px;color:#fb542b;font-weight:700">Brave Search</div><div>Opened official results in a new tab</div><div style="opacity:.5;font-size:12px">Proxies blocked Brave — this is the real site</div></body></html>';
+    }
+  }
+
+  function braveGo() {
+    let u = document.getElementById('brave-url').value.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u) && !u.startsWith('brave://')) {
+      braveDoSearch(u);
+      return;
+    }
+    if (u.startsWith('brave://search')) {
+      const m = u.match(/[?&]q=([^&]+)/);
+      braveDoSearch(m ? decodeURIComponent(m[1]) : '');
+      return;
+    }
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    document.getElementById('brave-url').value = u;
+    document.getElementById('brave-fallback').classList.remove('show');
+    const frame = braveActiveFrame();
+    if (!frame) return;
+    // workarounds for sites that set X-Frame-Options
+    const yt = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/);
+    if (yt) {
+      const embed = 'https://www.youtube-nocookie.com/embed/' + yt[1] + '?autoplay=1';
+      frame.removeAttribute('srcdoc');
+      frame.src = embed;
+      if (braveTabs[braveActive]) {
+        const t = braveTabs[braveActive];
+        t.url = u; t.title = 'YouTube';
+        const te = document.querySelector('.brave-tab[data-id="'+t.id+'"] .t-title');
+        if (te) te.textContent = 'YouTube';
+      }
+      return;
+    }
+    // load via allorigins proxy → srcdoc (strips X-Frame-Options)
+    if (braveTabs[braveActive]) {
+      const t = braveTabs[braveActive];
+      t.url = u;
+      t.title = u.replace(/^https?:\/\//,'').slice(0,24);
+      t.hist = t.hist.slice(0, t.idx + 1);
+      t.hist.push(u);
+      t.idx = t.hist.length - 1;
+      const te = document.querySelector('.brave-tab[data-id="'+t.id+'"] .t-title');
+      if (te) te.textContent = t.title;
+    }
+    frame.removeAttribute('src');
+    frame.srcdoc = '<html><body style="margin:0;background:#111;color:#aaa;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">Loading…</body></html>';
+    fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(u))
+      .then(r => r.text())
+      .then(html => {
+        // base href so relative assets resolve to original host
+        const base = '<base href="' + u.replace(/"/g,'') + '">';
+        if (/<head[^>]*>/i.test(html)) html = html.replace(/<head[^>]*>/i, m => m + base);
+        else html = base + html;
+        frame.srcdoc = html;
+      })
+      .catch(() => {
+        frame.srcdoc = '<html><body style="margin:0;background:#1a1a1a;color:#ccc;font-family:Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:10px"><div>Could not proxy this page</div><div style="opacity:.6;font-size:12px">'+u.replace(/</g,'')+'</div></body></html>';
+      });
+  }
+
+  function braveBack() {
+    const t = braveTabs[braveActive];
+    if (!t || t.idx <= 0) return;
+    t.idx--;
+    const u = t.hist[t.idx];
+    t.url = u;
+    document.getElementById('brave-url').value = u;
+    const frame = braveActiveFrame();
+    if (!frame) return;
+    if (u.startsWith('brave://')) {
+      frame.removeAttribute('src');
+      frame.srcdoc = braveSearchPage('');
+    } else {
+      frame.removeAttribute('srcdoc');
+      frame.src = u;
+    }
+  }
+
+  function braveFwd() {
+    const t = braveTabs[braveActive];
+    if (!t || t.idx >= t.hist.length - 1) return;
+    t.idx++;
+    const u = t.hist[t.idx];
+    t.url = u;
+    document.getElementById('brave-url').value = u;
+    const frame = braveActiveFrame();
+    if (!frame) return;
+    if (u.startsWith('brave://')) {
+      frame.removeAttribute('src');
+      frame.srcdoc = braveSearchPage('');
+    } else {
+      frame.removeAttribute('srcdoc');
+      frame.src = u;
+    }
+  }
+
+  function braveReload() {
+    const frame = braveActiveFrame();
+    if (!frame) return;
+    if (frame.srcdoc) {
+      const q = (document.getElementById('brave-url').value.match(/[?&]q=([^&]+)/)||[])[1];
+      frame.srcdoc = braveSearchPage(q ? decodeURIComponent(q) : '');
+    } else {
+      frame.src = frame.src;
+    }
+  }
+
+  // ========== AKATSUKI AI (real open models via pollinations — not GPT/Gemini) ==========
+  function openAi() {
+    document.getElementById('ai-win').classList.add('open');
+    document.getElementById('start-menu').classList.remove('open');
+    document.getElementById('overlay-click').classList.remove('show');
+    document.getElementById('start-btn').classList.remove('active');
+    setTimeout(() => document.getElementById('ai-input').focus(), 50);
+  }
+
+  function aiAppend(role, text) {
+    const chat = document.getElementById('ai-chat');
+    const div = document.createElement('div');
+    div.className = 'ai-msg ' + role;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function sendAi() {
+    const input = document.getElementById('ai-input');
+    const btn = document.getElementById('ai-send');
+    const q = (input.value || '').trim();
+    if (!q) return;
+    input.value = '';
+    aiAppend('user', q);
+    btn.disabled = true;
+    aiAppend('sys', 'thinking…');
+    try {
+      // Pollinations text API — free open models, no key, not OpenAI/Google
+      const url = 'https://text.pollinations.ai/' + encodeURIComponent(q) + '?model=openai';
+      const res = await fetch(url);
+      const text = await res.text();
+      document.querySelector('#ai-chat .ai-msg.sys:last-child')?.remove();
+      aiAppend('bot', text || '(empty response)');
+    } catch (e) {
+      document.querySelector('#ai-chat .ai-msg.sys:last-child')?.remove();
+      aiAppend('bot', 'offline or blocked — ' + (e.message || 'network error'));
+    }
+    btn.disabled = false;
+    input.focus();
+  }
+
+  // ready
+  renderGames();
+</script>
+</body>
+</html>
